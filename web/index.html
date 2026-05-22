@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>배너 요청</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f0f2f5;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 40px 16px;
+    }
+
+    .container {
+      background: #fff;
+      border-radius: 16px;
+      padding: 40px;
+      width: 100%;
+      max-width: 640px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+      height: fit-content;
+    }
+
+    h1 { font-size: 22px; font-weight: 700; color: #1a1a2e; margin-bottom: 4px; }
+    .subtitle { font-size: 13px; color: #999; margin-bottom: 24px; }
+
+    /* ── 배너 타입 선택 ── */
+    .section-label {
+      font-size: 12px; font-weight: 700; color: #999;
+      text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px;
+    }
+
+    .banner-type-row {
+      display: flex; gap: 10px; overflow-x: auto;
+      padding-bottom: 10px; margin-bottom: 24px;
+      scrollbar-width: thin;
+    }
+    .banner-type-row::-webkit-scrollbar { height: 4px; }
+    .banner-type-row::-webkit-scrollbar-thumb { background: #ddd; border-radius: 2px; }
+
+    .banner-card {
+      flex-shrink: 0; width: 130px;
+      border: 2px solid #e0e0e0; border-radius: 10px;
+      padding: 10px 10px 8px; cursor: pointer;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      background: #fafafa; text-align: center;
+    }
+    .banner-card:hover { border-color: #9fa8da; }
+    .banner-card.selected { border-color: #5C6BC0; box-shadow: 0 0 0 3px rgba(92,107,192,0.15); background: #f0f2ff; }
+
+    .banner-card-thumb {
+      width: 100%; height: 60px; object-fit: cover;
+      border-radius: 5px; background: #e8eaf6; margin-bottom: 7px; display: block;
+    }
+    .banner-card-icon {
+      width: 100%; height: 60px; border-radius: 5px;
+      background: #e8eaf6; margin-bottom: 7px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 26px; color: #9fa8da;
+    }
+    .banner-card-name {
+      font-size: 11px; font-weight: 700; color: #1a1a2e;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      margin-bottom: 3px;
+    }
+    .banner-card-sub { font-size: 10px; color: #999; }
+
+    .lib-loading { font-size: 13px; color: #bbb; padding: 20px 0; }
+    .lib-empty-msg { font-size: 13px; color: #bbb; padding: 20px 0; }
+
+    /* ── 동적 폼 영역 ── */
+    #formArea { margin-bottom: 24px; }
+
+    .field { margin-bottom: 24px; }
+    .field-label {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 13px; font-weight: 600; color: #444; margin-bottom: 8px;
+    }
+    .badge {
+      font-size: 10px; font-weight: 600;
+      background: #e8f4fd; color: #2196F3;
+      border-radius: 4px; padding: 2px 6px;
+    }
+    .badge-img {
+      background: #fce4ec; color: #e91e63;
+    }
+
+    /* 에디터 박스 */
+    .editor-box {
+      border: 1.5px solid #e0e0e0; border-radius: 10px;
+      overflow: hidden; transition: border-color 0.2s;
+    }
+    .editor-box:focus-within { border-color: #5C6BC0; }
+
+    .editor {
+      min-height: 72px; padding: 12px 14px;
+      font-size: 15px; font-family: inherit; outline: none;
+      line-height: 1.6; white-space: pre-wrap; word-break: break-word;
+    }
+    .editor:empty:before { content: attr(data-placeholder); color: #bbb; pointer-events: none; }
+
+    .ctrl-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 8px 12px; background: #fafafa;
+      border-top: 1px solid #f0f0f0; flex-wrap: wrap;
+    }
+    .ctrl-label { font-size: 11px; color: #999; white-space: nowrap; }
+
+    input[type="number"] {
+      width: 56px; padding: 5px 6px;
+      border: 1.5px solid #ddd; border-radius: 6px;
+      font-size: 13px; text-align: center; outline: none;
+    }
+    input[type="number"]:focus { border-color: #5C6BC0; }
+
+    .bold-toggle input { display: none; }
+    .bold-btn {
+      padding: 4px 10px; border: 1.5px solid #ddd; border-radius: 6px;
+      font-size: 13px; font-weight: 700; color: #666;
+      background: #fff; cursor: pointer; transition: all 0.15s; user-select: none;
+    }
+    .bold-toggle input:checked + .bold-btn { background: #5C6BC0; border-color: #5C6BC0; color: #fff; }
+
+    .palette-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 12px; background: #f5f5f5;
+      border-top: 1px solid #ebebeb; flex-wrap: wrap;
+    }
+    .palette-hint { font-size: 11px; color: #bbb; font-style: italic; margin-left: 4px; }
+    .swatch {
+      width: 22px; height: 22px; border-radius: 50%;
+      cursor: pointer; border: 2px solid transparent;
+      transition: transform 0.1s, border-color 0.1s; flex-shrink: 0;
+    }
+    .swatch:hover { transform: scale(1.2); border-color: rgba(0,0,0,0.2); }
+    .custom-color-wrap { position: relative; }
+    .custom-color-btn {
+      width: 22px; height: 22px; border-radius: 50%;
+      background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red);
+      cursor: pointer; border: 2px solid transparent; transition: transform 0.1s;
+    }
+    .custom-color-btn:hover { transform: scale(1.2); }
+    .custom-color-input {
+      position: absolute; top: 0; left: 0;
+      width: 100%; height: 100%; opacity: 0; cursor: pointer;
+    }
+    .swatch-bold {
+      padding: 3px 8px; border: 1.5px solid #ddd; border-radius: 6px;
+      font-size: 13px; font-weight: 700; color: #444;
+      background: #fff; cursor: pointer; transition: all 0.15s; user-select: none; line-height: 1;
+    }
+    .swatch-bold:hover { background: #5C6BC0; border-color: #5C6BC0; color: #fff; }
+    .swatch-clear {
+      padding: 3px 8px; border: 1.5px solid #ddd; border-radius: 6px;
+      font-size: 12px; font-weight: 500; color: #999;
+      background: #fff; cursor: pointer; transition: all 0.15s; user-select: none; line-height: 1;
+    }
+    .swatch-clear:hover { background: #fdecea; border-color: #f44336; color: #c62828; }
+    .size-mini {
+      width: 48px; padding: 3px 5px; border: 1.5px solid #ddd; border-radius: 6px;
+      font-size: 12px; text-align: center; outline: none;
+    }
+    .size-mini:focus { border-color: #5C6BC0; }
+    .swatch-size {
+      padding: 3px 8px; border: 1.5px solid #ddd; border-radius: 6px;
+      font-size: 12px; font-weight: 600; color: #555;
+      background: #fff; cursor: pointer; transition: all 0.15s; user-select: none; line-height: 1;
+    }
+    .swatch-size:hover { background: #e8eaf6; border-color: #5C6BC0; color: #3949AB; }
+    .color-apply-hint {
+      font-size: 11px; color: #e65100;
+      padding: 4px 12px 6px; background: #fff3e0; display: none;
+    }
+
+    /* ── 이미지 업로드 ── */
+    .image-field {
+      border: 1.5px dashed #ddd; border-radius: 10px;
+      padding: 14px; transition: border-color 0.2s;
+    }
+    .image-field:hover { border-color: #9fa8da; }
+    .image-preview-wrap { margin-bottom: 10px; }
+    .image-preview {
+      max-width: 100%; max-height: 120px; border-radius: 6px;
+      display: none; margin-bottom: 8px; border: 1px solid #eee;
+    }
+    .upload-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .file-label {
+      padding: 7px 14px; background: #e8eaf6; color: #3949AB;
+      border-radius: 7px; font-size: 12px; font-weight: 700;
+      cursor: pointer; white-space: nowrap;
+    }
+    .file-label:hover { background: #c5cae9; }
+    .file-input { display: none; }
+    .url-input {
+      flex: 1; min-width: 140px; padding: 7px 10px;
+      border: 1.5px solid #ddd; border-radius: 7px;
+      font-size: 12px; outline: none; font-family: inherit;
+    }
+    .url-input:focus { border-color: #5C6BC0; }
+    .btn-url-apply {
+      padding: 7px 12px; background: #5C6BC0; color: #fff;
+      border: none; border-radius: 7px; font-size: 12px; font-weight: 700;
+      cursor: pointer; white-space: nowrap;
+    }
+    .btn-url-apply:hover { background: #3F51B5; }
+    .img-status { font-size: 11px; color: #999; margin-top: 6px; }
+
+    /* ── 제출 ── */
+    .submit-btn {
+      width: 100%; padding: 14px; background: #5C6BC0; color: #fff;
+      font-size: 16px; font-weight: 700; border: none; border-radius: 10px;
+      cursor: pointer; transition: background 0.2s; margin-top: 4px;
+    }
+    .submit-btn:hover { background: #3F51B5; }
+    .submit-btn:disabled { background: #b0b8e8; cursor: not-allowed; }
+
+    .toast { display: none; margin-top: 16px; padding: 14px; border-radius: 10px; font-size: 14px; font-weight: 500; }
+    .toast.success { background: #e8f5e9; color: #2e7d32; display: block; }
+    .toast.error   { background: #fdecea; color: #c62828; display: block; }
+
+    /* ── 요청 현황 ── */
+    .status-section { margin-top: 32px; border-top: 1px solid #f0f0f0; padding-top: 20px; }
+    .status-title { font-size: 12px; font-weight: 600; color: #aaa; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .request-list { list-style: none; }
+    .request-item { display: flex; align-items: center; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid #f5f5f5; font-size: 13px; }
+    .request-item:last-child { border-bottom: none; }
+    .req-title { color: #333; font-weight: 500; }
+    .req-time  { color: #bbb; font-size: 11px; }
+    .status-badge { padding: 3px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+    .status-pending { background: #fff3e0; color: #e65100; }
+    .status-done    { background: #e8f5e9; color: #2e7d32; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>배너 요청</h1>
+  <p class="subtitle">요청하면 Figma에서 자동으로 배너가 복제·생성됩니다.</p>
+
+  <!-- 배너 타입 선택 -->
+  <p class="section-label">배너 타입 선택</p>
+  <div class="banner-type-row" id="bannerTypeRow">
+    <span class="lib-loading">배너 목록 로딩 중...</span>
+  </div>
+
+  <!-- 동적 폼 -->
+  <div id="formArea"></div>
+
+  <!-- 제출 버튼 -->
+  <button type="button" class="submit-btn" id="submitBtn" onclick="submitForm()" disabled>배너 요청하기</button>
+
+  <div class="toast" id="toast"></div>
+
+  <!-- 요청 현황 -->
+  <div class="status-section">
+    <p class="status-title">최근 요청 현황</p>
+    <ul class="request-list" id="requestList">
+      <li style="color:#ccc; font-size:13px;">아직 요청이 없습니다.</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+  // 같은 서버에서 서빙되므로 상대경로 사용 (로컬/배포 모두 동작)
+  var SERVER = '';
+  var DRAFT_KEY = 'banner_draft_v5';
+
+  var bannerLibrary = [];
+  var selectedTemplate = null;
+  var savedRanges = {};
+  var imageData = {};
+
+  // ── 라이브러리 로드 ───────────────────────────────────────
+  async function loadLibrary() {
+    var row = document.getElementById('bannerTypeRow');
+    try {
+      var res = await fetch(SERVER + '/api/library');
+      bannerLibrary = await res.json();
+      renderBannerCards(row);
+
+      // 처음 로드할 때만 드래프트 복원 (이미 선택된 상태면 건드리지 않음)
+      if (!selectedTemplate) {
+        restoreDraftSelection();
+      } else {
+        // 카드 선택 상태만 유지
+        var cards = document.querySelectorAll('.banner-card');
+        for (var i = 0; i < cards.length; i++) {
+          cards[i].classList.toggle('selected', cards[i].dataset.id === selectedTemplate.id);
+        }
+      }
+    } catch(e) {
+      row.innerHTML = '<span class="lib-empty-msg">서버에 연결할 수 없습니다.</span>';
+    }
+  }
+
+  function renderBannerCards(row) {
+    row.innerHTML = '';
+    if (!bannerLibrary.length) {
+      row.innerHTML = '<span class="lib-empty-msg">Figma 플러그인에서 배너를 먼저 등록해주세요.</span>';
+      return;
+    }
+    for (var i = 0; i < bannerLibrary.length; i++) {
+      (function(tmpl) {
+        var card = document.createElement('div');
+        card.className = 'banner-card';
+        card.dataset.id = tmpl.id;
+
+        var textCnt = tmpl.fields ? tmpl.fields.filter(function(f) { return f.type === 'text'; }).length : 0;
+        var imgCnt  = tmpl.fields ? tmpl.fields.filter(function(f) { return f.type === 'image'; }).length : 0;
+        var subParts = [];
+        if (textCnt) subParts.push('텍스트 ' + textCnt);
+        if (imgCnt)  subParts.push('이미지 ' + imgCnt);
+        var sub = subParts.join(', ') || '필드 없음';
+
+        var thumbHtml = tmpl.thumb
+          ? '<img class="banner-card-thumb" src="' + tmpl.thumb + '" alt="" />'
+          : '<div class="banner-card-icon">🖼</div>';
+
+        card.innerHTML = thumbHtml +
+          '<div class="banner-card-name">' + escHtml(tmpl.name) + '</div>' +
+          '<div class="banner-card-sub">' + escHtml(sub) + '</div>';
+
+        card.onclick = function() { selectTemplate(tmpl); };
+        if (selectedTemplate && selectedTemplate.id === tmpl.id) card.classList.add('selected');
+        row.appendChild(card);
+      })(bannerLibrary[i]);
+    }
+  }
+
+  function selectTemplate(tmpl) {
+    selectedTemplate = tmpl;
+
+    // 카드 하이라이트
+    var cards = document.querySelectorAll('.banner-card');
+    for (var i = 0; i < cards.length; i++) {
+      cards[i].classList.toggle('selected', cards[i].dataset.id === tmpl.id);
+    }
+
+    // 이미지 데이터 초기화
+    imageData = {};
+
+    renderForm(tmpl);
+    document.getElementById('submitBtn').disabled = false;
+    saveDraft();
+  }
+
+  // ── 폼 렌더링 ─────────────────────────────────────────────
+  function renderForm(tmpl) {
+    var area = document.getElementById('formArea');
+    area.innerHTML = '';
+    if (!tmpl || !tmpl.fields) return;
+
+    for (var i = 0; i < tmpl.fields.length; i++) {
+      (function(field) {
+        var div = document.createElement('div');
+        div.className = 'field';
+        var fk = field.layerName;
+
+        if (field.type === 'text') {
+          var defSize  = field.defaultSize  || 16;
+          var defColor = field.defaultColor || '#404040';
+          var defBold  = field.defaultBold  || false;
+          var defColorLabel = defColor.toUpperCase();
+
+          div.innerHTML =
+            '<div class="field-label">' +
+              escHtml(field.label) +
+              ' <span class="badge">' + escHtml(fk) + '</span>' +
+            '</div>' +
+            '<div class="editor-box">' +
+              '<div class="editor" id="editor_' + escAttr(fk) + '" contenteditable="true"' +
+                ' data-placeholder="' + escAttr(field.label) + ' 입력..."' +
+                ' style="color:' + escAttr(defColor) + '; font-size:' + defSize + 'px;' + (defBold ? ' font-weight:700;' : '') + '"' +
+                ' oninput="saveDraft()"' +
+                ' onblur="saveSelectionForField(\'' + escAttr(fk) + '\')">' +
+              '</div>' +
+              '<div class="ctrl-row">' +
+                '<span class="ctrl-label" title="Figma 원본 값 (참고용)">기본값</span>' +
+                '<span style="font-size:12px;color:#888;background:#f0f0f0;padding:3px 8px;border-radius:5px;border:1px solid #e0e0e0">' +
+                  defSize + 'px</span>' +
+                '<span style="font-size:12px;color:#888;background:' + escAttr(defColor) + ';padding:3px 8px;border-radius:5px;border:1px solid #e0e0e0;color:' + (defColor === '#ffffff' || defColor === '#FFFFFF' ? '#999' : '#fff') + '">' +
+                  escHtml(defColorLabel) +
+                '</span>' +
+                (defBold ? '<span style="font-size:12px;font-weight:700;color:#888;background:#f0f0f0;padding:3px 8px;border-radius:5px;border:1px solid #e0e0e0">Bold</span>' : '') +
+                '<span class="ctrl-label" style="margin-left:8px;color:#5C6BC0">전체 볼드</span>' +
+                '<label class="bold-toggle">' +
+                  '<input type="checkbox" id="globalBold_' + escAttr(fk) + '" onchange="saveDraft()" />' +
+                  '<span class="bold-btn">B</span>' +
+                '</label>' +
+              '</div>' +
+              '<div class="palette-row">' +
+                '<span class="ctrl-label">선택 색상</span>' +
+                '<span class="swatch" style="background:#404040" title="#404040" onmousedown="event.preventDefault()" onclick="applyColor(\'' + escAttr(fk) + '\',\'#404040\')"></span>' +
+                '<span class="swatch" style="background:#ffffff;border-color:#ccc" title="#FFFFFF" onmousedown="event.preventDefault()" onclick="applyColor(\'' + escAttr(fk) + '\',\'#ffffff\')"></span>' +
+                '<span class="swatch" style="background:#A3A3A3" title="#A3A3A3" onmousedown="event.preventDefault()" onclick="applyColor(\'' + escAttr(fk) + '\',\'#A3A3A3\')"></span>' +
+                '<span class="swatch" style="background:#016ED5" title="#016ED5" onmousedown="event.preventDefault()" onclick="applyColor(\'' + escAttr(fk) + '\',\'#016ED5\')"></span>' +
+                '<span class="swatch" style="background:#FF5722" title="#FF5722" onmousedown="event.preventDefault()" onclick="applyColor(\'' + escAttr(fk) + '\',\'#FF5722\')"></span>' +
+                '<div class="custom-color-wrap" title="직접 선택">' +
+                  '<div class="custom-color-btn"></div>' +
+                  '<input type="color" class="custom-color-input" id="customColor_' + escAttr(fk) + '" value="' + escAttr(defColor) + '"' +
+                    ' onmousedown="event.preventDefault()"' +
+                    ' oninput="applyColor(\'' + escAttr(fk) + '\', this.value)" />' +
+                '</div>' +
+                '<button type="button" class="swatch-bold" onmousedown="event.preventDefault()" onclick="applyBold(\'' + escAttr(fk) + '\')">B</button>' +
+                '<input type="number" class="size-mini" id="selSize_' + escAttr(fk) + '" value="' + defSize + '" min="8" max="200"' +
+                  ' onfocus="this.select()"' +
+                  ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();applySize(\'' + escAttr(fk) + '\');}" />' +
+                '<button type="button" class="swatch-size" onmousedown="event.preventDefault()" onclick="applySize(\'' + escAttr(fk) + '\')">크기</button>' +
+                '<button type="button" class="swatch-clear" onmousedown="event.preventDefault()" onclick="clearFormat(\'' + escAttr(fk) + '\')">지우기</button>' +
+                '<span class="palette-hint" id="hint_' + escAttr(fk) + '">텍스트 선택 후 클릭</span>' +
+              '</div>' +
+              '<div class="color-apply-hint" id="colorHint_' + escAttr(fk) + '">텍스트를 먼저 드래그해서 선택하세요!</div>' +
+            '</div>';
+
+        } else if (field.type === 'image') {
+          div.innerHTML =
+            '<div class="field-label">' +
+              escHtml(field.label) +
+              ' <span class="badge badge-img">' + escHtml(fk) + '</span>' +
+            '</div>' +
+            '<div class="image-field">' +
+              '<div class="image-preview-wrap">' +
+                '<img class="image-preview" id="imgPreview_' + escAttr(fk) + '" src="" alt="" />' +
+              '</div>' +
+              '<div class="upload-row">' +
+                '<label class="file-label">파일 선택' +
+                  '<input type="file" class="file-input" id="fileInput_' + escAttr(fk) + '" accept="image/*"' +
+                    ' onchange="handleFileSelect(\'' + escAttr(fk) + '\', this)" />' +
+                '</label>' +
+                '<input type="text" class="url-input" id="urlInput_' + escAttr(fk) + '" placeholder="이미지 URL 입력..." />' +
+                '<button type="button" class="btn-url-apply" onclick="applyUrl(\'' + escAttr(fk) + '\')">URL 적용</button>' +
+              '</div>' +
+              '<div class="img-status" id="imgStatus_' + escAttr(fk) + '"></div>' +
+            '</div>';
+        }
+
+        area.appendChild(div);
+
+        // ── 텍스트 에디터 기본값(원본 배너 스타일) 채우기 ──
+        if (field.type === 'text' && field.defaultSegments && field.defaultSegments.length) {
+          var edEl = document.getElementById('editor_' + fk);
+          if (edEl) {
+            edEl.innerHTML = segmentsToHtml(field.defaultSegments, defColor, defBold, defSize);
+          }
+        }
+      })(tmpl.fields[i]);
+    }
+
+    // 드래프트 내용 복원 (드래프트가 있으면 기본값 위에 덮어씀)
+    restoreDraftFields(tmpl);
+  }
+
+  // ── 색상/볼드/크기 팔레트 함수 ───────────────────────────
+  function applyColor(fieldKey, color) {
+    var editor = document.getElementById('editor_' + fieldKey);
+    var sel = window.getSelection();
+
+    if (!sel || sel.rangeCount === 0 || sel.isCollapsed) { showColorHint(fieldKey); return; }
+    var range = sel.getRangeAt(0);
+    if (!editor || !editor.contains(range.commonAncestorContainer)) { showColorHint(fieldKey); return; }
+
+    var span = document.createElement('span');
+    span.style.color = color;
+    try {
+      range.surroundContents(span);
+    } catch(e) {
+      var frag = range.extractContents();
+      span.appendChild(frag);
+      range.insertNode(span);
+      range.setStartAfter(span); range.setEndAfter(span);
+      sel.removeAllRanges(); sel.addRange(range);
+    }
+    saveDraft();
+  }
+
+  function saveSelectionForField(fieldKey) {
+    var sel = window.getSelection();
+    if (sel && sel.rangeCount && !sel.isCollapsed) {
+      savedRanges[fieldKey] = sel.getRangeAt(0).cloneRange();
+    }
+  }
+
+  function applySize(fieldKey) {
+    var size = parseInt(document.getElementById('selSize_' + fieldKey).value);
+    if (!size || size < 8) return;
+    var editor = document.getElementById('editor_' + fieldKey);
+    if (!savedRanges[fieldKey] || !editor || !editor.contains(savedRanges[fieldKey].commonAncestorContainer)) {
+      showColorHint(fieldKey); return;
+    }
+    var range = savedRanges[fieldKey];
+    editor.focus();
+    var sel = window.getSelection();
+    sel.removeAllRanges(); sel.addRange(range);
+    var span = document.createElement('span');
+    span.style.fontSize = size + 'px';
+    try {
+      range.surroundContents(span);
+    } catch(e) {
+      var frag = range.extractContents();
+      span.appendChild(frag);
+      range.insertNode(span);
+      range.setStartAfter(span); range.setEndAfter(span);
+      sel.removeAllRanges(); sel.addRange(range);
+    }
+    savedRanges[fieldKey] = null;
+    saveDraft();
+  }
+
+  function isSelectionBold(editor) {
+    var sel = window.getSelection();
+    if (!sel || !sel.rangeCount) return false;
+    var node = sel.getRangeAt(0).startContainer;
+    if (node.nodeType === 3) node = node.parentElement;
+    while (node && node !== editor) {
+      var fw = node.style && node.style.fontWeight;
+      if (fw === '700' || fw === 'bold') return true;
+      if (fw === 'normal' || fw === '400') return false;
+      node = node.parentElement;
+    }
+    return false;
+  }
+
+  function applyBold(fieldKey) {
+    var editor = document.getElementById('editor_' + fieldKey);
+    var sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0 || sel.isCollapsed) { showColorHint(fieldKey); return; }
+    var range = sel.getRangeAt(0);
+    if (!editor || !editor.contains(range.commonAncestorContainer)) { showColorHint(fieldKey); return; }
+    var alreadyBold = isSelectionBold(editor);
+    var span = document.createElement('span');
+    span.style.fontWeight = alreadyBold ? 'normal' : '700';
+    try {
+      range.surroundContents(span);
+    } catch(e) {
+      var frag = range.extractContents();
+      span.appendChild(frag);
+      range.insertNode(span);
+      range.setStartAfter(span); range.setEndAfter(span);
+      sel.removeAllRanges(); sel.addRange(range);
+    }
+    saveDraft();
+  }
+
+  function clearFormat(fieldKey) {
+    var editor = document.getElementById('editor_' + fieldKey);
+    var sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0 || sel.isCollapsed) { showColorHint(fieldKey); return; }
+    var range = sel.getRangeAt(0);
+    if (!editor || !editor.contains(range.commonAncestorContainer)) return;
+    var frag = range.extractContents();
+    var plain = document.createTextNode(frag.textContent);
+    range.insertNode(plain);
+    var newRange = document.createRange();
+    newRange.selectNode(plain);
+    sel.removeAllRanges(); sel.addRange(newRange);
+    saveDraft();
+  }
+
+  // 전체 기본색 변경 (에디터 전체에 적용)
+  function applyGlobalColor(fieldKey, color) {
+    var editor = document.getElementById('editor_' + fieldKey);
+    if (editor) editor.style.color = color;
+    var hidden = document.getElementById('globalColor_' + fieldKey);
+    if (hidden) hidden.value = color;
+    saveDraft();
+  }
+
+  function showColorHint(fieldKey) {
+    var hint = document.getElementById('colorHint_' + fieldKey);
+    if (!hint) return;
+    hint.style.display = 'block';
+    setTimeout(function() { hint.style.display = 'none'; }, 2500);
+  }
+
+  // ── 이미지 필드 ──────────────────────────────────────────
+  function handleFileSelect(fieldKey, input) {
+    var file = input.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      imageData[fieldKey] = e.target.result;
+      var preview = document.getElementById('imgPreview_' + fieldKey);
+      if (preview) { preview.src = e.target.result; preview.style.display = 'block'; }
+      var status = document.getElementById('imgStatus_' + fieldKey);
+      if (status) status.textContent = file.name + ' 선택됨';
+      saveDraft();
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function applyUrl(fieldKey) {
+    var urlEl = document.getElementById('urlInput_' + fieldKey);
+    var url = urlEl ? urlEl.value.trim() : '';
+    if (!url) return;
+    var status = document.getElementById('imgStatus_' + fieldKey);
+    if (status) status.textContent = '이미지 가져오는 중...';
+    try {
+      var res = await fetch(SERVER + '/api/fetch-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: url })
+      });
+      var data = await res.json();
+      if (data.base64) {
+        imageData[fieldKey] = data.base64;
+        var preview = document.getElementById('imgPreview_' + fieldKey);
+        if (preview) { preview.src = data.base64; preview.style.display = 'block'; }
+        if (status) status.textContent = 'URL 이미지 적용 완료';
+        saveDraft();
+      } else {
+        if (status) status.textContent = '오류: ' + (data.error || '알 수 없음');
+      }
+    } catch(e) {
+      if (status) status.textContent = '서버 오류';
+    }
+  }
+
+  // ── Figma 세그먼트 → 에디터 HTML 변환 ────────────────────
+  function segmentsToHtml(segments, baseColor, baseBold, baseSize) {
+    if (!segments || !segments.length) return '';
+    var html = '';
+    for (var i = 0; i < segments.length; i++) {
+      var seg = segments[i];
+      var lines = seg.text.split('\n');
+      for (var li = 0; li < lines.length; li++) {
+        if (li > 0) html += '<br>';
+        var txt = lines[li]
+          .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+          .replace(/ /g, ' ');  // 공백 유지
+        if (!txt) continue;
+        var styles = [];
+        // 베이스와 다를 때만 span 추가
+        if (seg.color && (!baseColor || seg.color.toLowerCase() !== baseColor.toLowerCase())) {
+          styles.push('color:' + seg.color);
+        }
+        var isBold = seg.bold === true;
+        if (isBold !== !!baseBold) styles.push('font-weight:' + (isBold ? '700' : 'normal'));
+        if (seg.size && seg.size !== baseSize) styles.push('font-size:' + seg.size + 'px');
+        html += styles.length
+          ? '<span style="' + styles.join(';') + '">' + txt + '</span>'
+          : txt;
+      }
+    }
+    return html;
+  }
+
+  // ── parseSegments ─────────────────────────────────────────
+  function parseSegments(editor) {
+    var segments = [];
+
+    function walk(node, inheritedColor, inheritedBold, inheritedSize) {
+      if (node.nodeType === 3) {
+        var text = node.textContent.replace(/ | /g, ' ');
+        if (text) segments.push({ text: text, color: inheritedColor || null, bold: inheritedBold || null, size: inheritedSize || null });
+      } else if (node.nodeName === 'BR') {
+        segments.push({ text: '\n', color: null, bold: null, size: null });
+      } else {
+        var color = inheritedColor;
+        var bold  = inheritedBold;
+        var size  = inheritedSize;
+        if (node.style && node.style.color) {
+          color = cssColorToHex(node.style.color) || inheritedColor;
+        }
+        if (node.style && node.style.fontWeight) {
+          bold = (node.style.fontWeight === '700' || node.style.fontWeight === 'bold') ? true : false;
+        }
+        if (node.nodeName === 'B' || node.nodeName === 'STRONG') { bold = true; }
+        if (node.style && node.style.fontSize) {
+          var parsed = parseInt(node.style.fontSize);
+          if (parsed) size = parsed;
+        }
+        if (node.nodeName === 'DIV' && node !== editor && segments.length > 0) {
+          segments.push({ text: '\n', color: null, bold: null, size: null });
+        }
+        for (var i = 0; i < node.childNodes.length; i++) {
+          walk(node.childNodes[i], color, bold, size);
+        }
+      }
+    }
+
+    walk(editor, null, null, null);
+    while (segments.length && !segments[segments.length - 1].text.trim()) segments.pop();
+    return segments;
+  }
+
+  function cssColorToHex(css) {
+    if (!css) return null;
+    // rgb(r, g, b) 또는 rgba(r, g, b, a)
+    var m = css.match(/^rgba?\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
+    if (m) {
+      return '#' + [m[1], m[2], m[3]].map(function(n) {
+        return parseInt(n).toString(16).padStart(2, '0');
+      }).join('');
+    }
+    if (css.charAt(0) === '#') return css.toLowerCase();
+    return null;
+  }
+
+  // ── 폼 데이터 수집 ───────────────────────────────────────
+  function getFormData(tmpl) {
+    var fields = {};
+    var firstTextValue = '';
+
+    if (!tmpl || !tmpl.fields) return null;
+
+    for (var i = 0; i < tmpl.fields.length; i++) {
+      var field = tmpl.fields[i];
+      var fk = field.layerName;
+
+      if (field.type === 'text') {
+        var editorEl = document.getElementById('editor_' + fk);
+        var boldEl   = document.getElementById('globalBold_' + fk);
+        if (!editorEl) continue;
+        var segs = parseSegments(editorEl);
+        var globalBold = boldEl ? boldEl.checked : false;
+        // size/baseColor는 Figma 원본 값을 유지 → 전달하지 않음
+        // globalBold만 체크 시 전체에 적용됨
+        fields[fk] = {
+          type: 'text',
+          segments: segs,
+          bold: globalBold
+        };
+        if (!firstTextValue && segs.length) {
+          firstTextValue = segs.map(function(s) { return s.text; }).join('').trim();
+        }
+
+      } else if (field.type === 'image') {
+        if (imageData[fk]) {
+          fields[fk] = { type: 'image', base64: imageData[fk] };
+        }
+      }
+    }
+
+    return {
+      bannerType: tmpl.id,
+      title: firstTextValue || tmpl.name,
+      fields: fields
+    };
+  }
+
+  // ── 제출 ────────────────────────────────────────────────
+  async function submitForm() {
+    if (!selectedTemplate) return;
+    var btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.textContent = '요청 중...';
+
+    var body = getFormData(selectedTemplate);
+    if (!body) { btn.disabled = false; btn.textContent = '배너 요청하기'; return; }
+
+    try {
+      var res = await fetch(SERVER + '/api/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      var data = await res.json();
+      if (data.success) {
+        showToast('배너 요청이 등록됐습니다! Figma 플러그인이 곧 처리합니다.', 'success');
+        clearDraftFields();
+        loadRequests();
+      } else {
+        showToast(data.error || '오류가 발생했습니다.', 'error');
+      }
+    } catch(e) {
+      showToast('서버에 연결할 수 없습니다. 서버가 실행 중인지 확인하세요.', 'error');
+    }
+
+    btn.disabled = false;
+    btn.textContent = '배너 요청하기';
+  }
+
+  function showToast(msg, type) {
+    var el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = 'toast ' + type;
+    setTimeout(function() { el.className = 'toast'; }, 5000);
+  }
+
+  // ── 임시저장 ─────────────────────────────────────────────
+  var saveTimer = null;
+  function saveDraft() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(function() {
+      try {
+        var draft = { selectedBannerType: selectedTemplate ? selectedTemplate.id : null, fields: {} };
+        if (selectedTemplate && selectedTemplate.fields) {
+          for (var i = 0; i < selectedTemplate.fields.length; i++) {
+            var field = selectedTemplate.fields[i];
+            var fk = field.layerName;
+            if (field.type === 'text') {
+              var editorEl = document.getElementById('editor_' + fk);
+              var boldEl   = document.getElementById('globalBold_' + fk);
+              draft.fields[fk] = {
+                html:       editorEl ? editorEl.innerHTML : '',
+                globalBold: boldEl   ? boldEl.checked : false
+              };
+            } else if (field.type === 'image') {
+              draft.fields[fk] = { base64: imageData[fk] || '' };
+            }
+          }
+        }
+        localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+      } catch(e) {}
+    }, 500);
+  }
+
+  function restoreDraftSelection() {
+    try {
+      var raw = localStorage.getItem(DRAFT_KEY);
+      if (!raw) return;
+      var draft = JSON.parse(raw);
+      if (!draft.selectedBannerType) return;
+      for (var i = 0; i < bannerLibrary.length; i++) {
+        if (bannerLibrary[i].id === draft.selectedBannerType) {
+          selectTemplate(bannerLibrary[i]);
+          break;
+        }
+      }
+    } catch(e) {}
+  }
+
+  function restoreDraftFields(tmpl) {
+    try {
+      var raw = localStorage.getItem(DRAFT_KEY);
+      if (!raw) return;
+      var draft = JSON.parse(raw);
+      if (!draft.fields || draft.selectedBannerType !== tmpl.id) return;
+      for (var fk in draft.fields) {
+        var fd = draft.fields[fk];
+        var editorEl = document.getElementById('editor_' + fk);
+        if (editorEl && fd.html !== undefined) editorEl.innerHTML = fd.html;
+        var boldEl = document.getElementById('globalBold_' + fk);
+        if (boldEl && fd.globalBold !== undefined) boldEl.checked = fd.globalBold;
+        if (fd.base64) {
+          imageData[fk] = fd.base64;
+          var preview = document.getElementById('imgPreview_' + fk);
+          if (preview) { preview.src = fd.base64; preview.style.display = 'block'; }
+        }
+      }
+    } catch(e) {}
+  }
+
+  function clearDraftFields() {
+    if (!selectedTemplate || !selectedTemplate.fields) return;
+    for (var i = 0; i < selectedTemplate.fields.length; i++) {
+      var field = selectedTemplate.fields[i];
+      var fk = field.layerName;
+      if (field.type === 'text') {
+        var editorEl = document.getElementById('editor_' + fk);
+        if (editorEl) editorEl.innerHTML = '';
+      } else if (field.type === 'image') {
+        imageData[fk] = null;
+        var preview = document.getElementById('imgPreview_' + fk);
+        if (preview) { preview.src = ''; preview.style.display = 'none'; }
+      }
+    }
+    try { localStorage.removeItem(DRAFT_KEY); } catch(e) {}
+  }
+
+  // ── 요청 현황 ────────────────────────────────────────────
+  async function loadRequests() {
+    try {
+      var res = await fetch(SERVER + '/api/requests');
+      var list = await res.json();
+      var ul = document.getElementById('requestList');
+      if (!list.length) {
+        ul.innerHTML = '<li style="color:#ccc; font-size:13px;">아직 요청이 없습니다.</li>';
+        return;
+      }
+      ul.innerHTML = list.slice(0, 10).map(function(r) {
+        var time = new Date(r.createdAt).toLocaleTimeString('ko-KR');
+        var cls  = r.status === 'done' ? 'status-done' : 'status-pending';
+        var txt  = r.status === 'done' ? '완료' : '대기중';
+        return '<li class="request-item">' +
+          '<div><span class="req-title">' + escHtml(r.data.title || '(타이틀 없음)') + '</span>' +
+          '<span class="req-time"> · ' + time + '</span></div>' +
+          '<span class="status-badge ' + cls + '">' + txt + '</span></li>';
+      }).join('');
+    } catch(e) {}
+  }
+
+  function escHtml(str) {
+    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function escAttr(str) {
+    return String(str || '').replace(/'/g, "\\'").replace(/"/g,'&quot;');
+  }
+
+  // ── 초기 로드 ────────────────────────────────────────────
+  loadLibrary();
+  loadRequests();
+  setInterval(loadRequests, 8000);
+  // 라이브러리 갱신: 폼 작성 중(selectedTemplate 있음)에는 재렌더 하지 않음
+  setInterval(function() {
+    if (!selectedTemplate) loadLibrary();
+  }, 30000);
+</script>
+</body>
+</html>

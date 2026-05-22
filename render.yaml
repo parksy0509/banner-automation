@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: banner-automation
+    env: node
+    rootDir: server
+    buildCommand: npm install
+    startCommand: node index.js
+    envVars:
+      - key: SUPABASE_URL
+        value: https://jwvlwrcgrjpbguhcghok.supabase.co
+      - key: SUPABASE_KEY
+        sync: false   # Render 대시보드에서 직접 입력
