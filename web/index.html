@@ -250,6 +250,26 @@
   <!-- 동적 폼 -->
   <div id="formArea"></div>
 
+  <!-- 요청 정보 -->
+  <div id="requestInfoArea" style="display:none; margin-bottom:20px;">
+    <div style="border-top:1px solid #eee; margin-bottom:20px;"></div>
+    <p class="section-label">요청 정보</p>
+    <div style="display:flex; flex-direction:column; gap:12px;">
+      <div>
+        <label style="font-size:12px; font-weight:600; color:#555; display:block; margin-bottom:4px;">요청자 이름 *</label>
+        <input type="text" id="requesterInput" placeholder="이름 입력" style="width:100%; padding:10px 12px; border:1.5px solid #e0e0e0; border-radius:8px; font-size:14px; outline:none;" />
+      </div>
+      <div>
+        <label style="font-size:12px; font-weight:600; color:#555; display:block; margin-bottom:4px;">마감일</label>
+        <input type="date" id="deadlineInput" style="width:100%; padding:10px 12px; border:1.5px solid #e0e0e0; border-radius:8px; font-size:14px; outline:none;" />
+      </div>
+      <div>
+        <label style="font-size:12px; font-weight:600; color:#555; display:block; margin-bottom:4px;">메모 (선택)</label>
+        <textarea id="memoInput" placeholder="디자이너에게 전달할 내용" rows="2" style="width:100%; padding:10px 12px; border:1.5px solid #e0e0e0; border-radius:8px; font-size:14px; outline:none; resize:none;"></textarea>
+      </div>
+    </div>
+  </div>
+
   <!-- 제출 버튼 -->
   <button type="button" class="submit-btn" id="submitBtn" onclick="submitForm()" disabled>배너 요청하기</button>
 
@@ -345,6 +365,7 @@
 
     renderForm(tmpl);
     document.getElementById('submitBtn').disabled = false;
+    document.getElementById('requestInfoArea').style.display = 'block';
     saveDraft();
   }
 
@@ -735,10 +756,17 @@
       }
     }
 
+    var requester = (document.getElementById('requesterInput') || {}).value || '';
+    var deadline  = (document.getElementById('deadlineInput')  || {}).value || '';
+    var memo      = (document.getElementById('memoInput')      || {}).value || '';
+
     return {
       bannerType: tmpl.id,
-      title: firstTextValue || tmpl.name,
-      fields: fields
+      title:      firstTextValue || tmpl.name,
+      requester:  requester.trim(),
+      deadline:   deadline,
+      memo:       memo.trim(),
+      fields:     fields
     };
   }
 

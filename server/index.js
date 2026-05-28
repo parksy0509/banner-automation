@@ -8,9 +8,62 @@ const { createClient } = require('@supabase/supabase-js');
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://jwvlwrcgrjpbguhcghok.supabase.co';
-const SUPABASE_KEY = process.env.SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp3dmx3cmNncmpwYmd1aGNnaG9rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3ODAzMDIsImV4cCI6MjA5NDM1NjMwMn0.4L4fTszQALJluziWszlt8tL9gY8jJz2cJn6ZYofbh-w';
+const SUPABASE_URL  = process.env.SUPABASE_URL || 'https://jwvlwrcgrjpbguhcghok.supabase.co';
+const SUPABASE_KEY  = process.env.SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp3dmx3cmNncmpwYmd1aGNnaG9rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3ODAzMDIsImV4cCI6MjA5NDM1NjMwMn0.4L4fTszQALJluziWszlt8tL9gY8jJz2cJn6ZYofbh-w';
+const SLACK_WEBHOOK = process.env.SLACK_WEBHOOK || '';
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ── 슬랙 알림 ────────────────────────────────────────────────────────────
+async function sendSlackNotification(data) {
+  if (!SLACK_WEBHOOK) return;
+  try {
+    const bannerType = data.bannerType || '-';
+    const requester  = data.requester  || '-';
+    const deadline   = data.deadline   || '-';
+    const memo       = data.memo       || '-';
+
+    const message = {
+      text: '🎨 새 배너 요청이 들어왔어요!',
+      blocks: [
+        {
+          type: 'header',
+          text: { type: 'plain_text', text: '🎨 새 배너 요청', emoji: true }
+        },
+        {
+          type: 'section',
+          fields: [
+            { type: 'mrkdwn', text: '*배너 종류*\n' + bannerType },
+            { type: 'mrkdwn', text: '*요청자*\n' + requester },
+            { type: 'mrkdwn', text: '*마감일*\n' + deadline },
+            { type: 'mrkdwn', text: '*메모*\n' + memo }
+          ]
+        },
+        {
+          type: 'actions',
+          elements: [{
+            type: 'button',
+            text: { type: 'plain_text', text: '요청 페이지 확인', emoji: true },
+            url: 'https://banner-automation.onrender.com',
+            style: 'primary'
+          }]
+        }
+      ]
+    };
+
+    const body = JSON.stringify(message);
+    const url  = new URL(SLACK_WEBHOOK);
+    const mod  = url.protocol === 'https:' ? https : http;
+    await new Promise((resolve, reject) => {
+      const req = mod.request({ hostname: url.hostname, path: url.pathname, method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } }, resolve);
+      req.on('error', reject);
+      req.write(body);
+      req.end();
+    });
+    console.log('[슬랙 알림 전송 완료]');
+  } catch(e) {
+    console.error('[슬랙 알림 실패]', e.message);
+  }
+}
 
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
@@ -67,6 +120,7 @@ app.post('/api/request', async (req, res) => {
 
   if (error) { console.error('[요청 등록 실패]', error.message); return res.status(500).json({ error: error.message }); }
   console.log('[새 요청] ID:', row.id, '| 배너타입:', data.bannerType);
+  sendSlackNotification(data);
   res.json({ success: true, id: row.id });
 });
 
