@@ -17,7 +17,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 async function sendSlackNotification(data) {
   if (!SLACK_WEBHOOK) return;
   try {
-    const bannerType = data.bannerType || '-';
+    const bannerType = data.bannerName || data.bannerType || '-';
     const requester  = data.requester  || '-';
     const deadline   = data.deadline   || '-';
     const memo       = data.memo       || '-';
